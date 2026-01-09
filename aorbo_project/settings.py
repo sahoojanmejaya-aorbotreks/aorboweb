@@ -35,7 +35,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]  # allows all hosts for testing
 CSRF_TRUSTED_ORIGINS = [
-    "https://628e10d95398.ngrok-free.app",
+    "https://aorbotreksweb.onrender.com",
     "https://aorbotreks.com",
     "https://www.aorbotreks.com",
 ]
@@ -232,7 +232,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://www.aorbotreks.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "https://628e10d95398.ngrok-free.app"
+    "https://aorbotreksweb.onrender.com"
 ]
 
 REST_FRAMEWORK = {
@@ -257,7 +257,7 @@ REST_FRAMEWORK = {
 #             "'self'",
 #             'https://aorbotreks.com',
 #             'https://www.aorbotreks.com',
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #         'default-src': (
 #             "'self'",
@@ -269,7 +269,7 @@ REST_FRAMEWORK = {
 #             'https://cdn.jsdelivr.net',
 #             'https://aorbotreks.com',
 #             'https://www.aorbotreks.com',
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #         'font-src': (
 #             "'self'",
@@ -277,7 +277,7 @@ REST_FRAMEWORK = {
 #             "https://google.com",
 #             'https://aorbotreks.com',
 #             'https://www.aorbotreks.com',
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #         'form-action': ("'self'",),
 #         'frame-ancestors': ("'self'",),
@@ -288,7 +288,7 @@ REST_FRAMEWORK = {
 #             'https://google.com',
 #             'https://www.aorbotreks.com',
 #             "https://xsconhhzyaiowokwsqne.supabase.co",
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #         'object-src': ("'none'",),
 #         'script-src': (
@@ -300,7 +300,7 @@ REST_FRAMEWORK = {
 #             'https://www.gstatic.com',
 #             'https://aorbotreks.com',
 #             'https://www.aorbotreks.com',
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #         'style-src': (
 #             "'self'",
@@ -311,7 +311,7 @@ REST_FRAMEWORK = {
 #             'https://www.gstatic.com',
 #             'https://aorbotreks.com',
 #             'https://www.aorbotreks.com',
-#             "https://628e10d95398.ngrok-free.app"
+#             "https://aorbotreksweb.onrender.com"
 #         ),
 #     }
 # }
@@ -324,7 +324,7 @@ CONTENT_SECURITY_POLICY = {
             "'self'",
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app",
+            "https://aorbotreksweb.onrender.com",
             # 🔽 added for reCAPTCHA / Google
             'https://www.google.com',
             'https://www.gstatic.com',
@@ -340,7 +340,7 @@ CONTENT_SECURITY_POLICY = {
             'https://cdn.jsdelivr.net',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app"
+            "https://aorbotreksweb.onrender.com"
         ),
 
         'font-src': (
@@ -349,7 +349,7 @@ CONTENT_SECURITY_POLICY = {
             "https://google.com",
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app"
+            "https://aorbotreksweb.onrender.com"
         ),
 
         'form-action': ("'self'",),
@@ -369,7 +369,7 @@ CONTENT_SECURITY_POLICY = {
             'https://google.com',
             'https://www.aorbotreks.com',
             "https://xsconhhzyaiowokwsqne.supabase.co",
-            "https://628e10d95398.ngrok-free.app",
+            "https://aorbotreksweb.onrender.com",
             # 🔽 added
             'https://www.gstatic.com',
         ),
@@ -385,7 +385,7 @@ CONTENT_SECURITY_POLICY = {
             'https://www.gstatic.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app"
+            "https://aorbotreksweb.onrender.com"
         ),
 
         # 🔽 REQUIRED for external Google scripts
@@ -396,7 +396,7 @@ CONTENT_SECURITY_POLICY = {
             'https://www.gstatic.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app"
+            "https://aorbotreksweb.onrender.com"
         ),
 
         'style-src': (
@@ -408,7 +408,7 @@ CONTENT_SECURITY_POLICY = {
             'https://www.gstatic.com',
             'https://aorbotreks.com',
             'https://www.aorbotreks.com',
-            "https://628e10d95398.ngrok-free.app"
+            "https://aorbotreksweb.onrender.com"
         ),
     }
 }
