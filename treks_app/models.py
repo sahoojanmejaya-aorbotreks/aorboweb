@@ -3,15 +3,17 @@ from django.utils import timezone
 from django.urls import reverse
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+from django.utils.html import mark_safe
+from django.conf import settings
+from ckeditor.fields import RichTextField
+from PIL import Image, ImageEnhance
 import bleach
 import uuid
 import mimetypes
-from .supabase_client import supabase
-from ckeditor.fields import RichTextField
-from io import BytesIO
-from PIL import Image, ImageEnhance
-from django.utils.html import mark_safe
 import io
+from io import BytesIO
+
+from .supabase_client import supabase
 
 class Visitor(models.Model):
     ip_address = models.GenericIPAddressField()
@@ -29,35 +31,43 @@ class Visitor(models.Model):
         return f"{self.ip_address} @ {self.visit_time}"
 
 def validate_image_file_extension(value):
+    """Validate image file extension, MIME type, and size."""
     import os
     from django.template.defaultfilters import filesizeformat
-    from django.conf import settings
 
-    ext = os.path.splitext(value.name)[1]
-    valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']
-    if not ext.lower() in valid_extensions:
-        raise ValidationError('Unsupported file extension. Allowed extensions are: ' + ', '.join(valid_extensions))
-    
-    import magic
+    VALID_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']
+    ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp']
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+    ext = os.path.splitext(value.name)[1].lower()
+    if ext not in VALID_EXTENSIONS:
+        raise ValidationError(
+            f'Unsupported file extension. Allowed: {" ".join(VALID_EXTENSIONS)}'
+        )
+
+    if value.size > MAX_FILE_SIZE:
+        raise ValidationError(
+            f'File size too large. Max size is {filesizeformat(MAX_FILE_SIZE)}.'
+        )
+
+    # Validate MIME type if python-magic is available
     try:
+        import magic
         mime_type = magic.from_buffer(value.read(1024), mime=True)
-        value.seek(0) # Reset file pointer after reading
+        value.seek(0)
+        if mime_type not in ALLOWED_MIME_TYPES:
+            raise ValidationError(
+                f'Unsupported file type: {mime_type}. Allowed: {" ".join(ALLOWED_MIME_TYPES)}'
+            )
+    except ImportError:
+        # python-magic not available, skip MIME validation
+        value.seek(0)
     except Exception as e:
-        raise ValidationError(f"Could not determine file type: {e}")
-
-    allowed_mime_types = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp']
-    if mime_type not in allowed_mime_types:
-        raise ValidationError(f'Unsupported file type. Detected: {mime_type}. Allowed types are: ' + ', '.join(allowed_mime_types))
-
-    # Max file size check (example, adjust as needed)
-    max_size = 5 * 1024 * 1024  # 5 MB
-    if value.size > max_size:
-        raise ValidationError(f'File size too large. Max size is {filesizeformat(max_size)}.')
+        raise ValidationError(f"File validation error: {str(e)}")
 
 
-
-# Create your models here.
 class Contact(models.Model):
+    """Store contact form submissions."""
     name = models.CharField(max_length=100)
     email = models.EmailField(max_length=100)
     mobile = models.CharField(max_length=20)
@@ -71,6 +81,7 @@ class Contact(models.Model):
 
 
 class Blog(models.Model):
+    """Blog articles with watermarked images stored in Supabase."""
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     content = RichTextField()
