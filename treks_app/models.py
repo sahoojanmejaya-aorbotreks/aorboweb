@@ -12,7 +12,8 @@ import uuid
 import mimetypes
 import io
 from io import BytesIO
-
+import os
+from django.template.defaultfilters import filesizeformat
 from .supabase_client import supabase
 
 class Visitor(models.Model):
@@ -30,41 +31,31 @@ class Visitor(models.Model):
     def __str__(self):
         return f"{self.ip_address} @ {self.visit_time}"
 
+
 def validate_image_file_extension(value):
-    """Validate image file extension, MIME type, and size."""
-    import os
-    from django.template.defaultfilters import filesizeformat
+    """
+    Validate image file extension, size, and actual image content using Pillow.
+    """
 
-    VALID_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp']
-    ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp']
+    VALID_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
-
     ext = os.path.splitext(value.name)[1].lower()
     if ext not in VALID_EXTENSIONS:
         raise ValidationError(
-            f'Unsupported file extension. Allowed: {" ".join(VALID_EXTENSIONS)}'
+            f"Unsupported file extension. Allowed: {', '.join(VALID_EXTENSIONS)}"
         )
-
     if value.size > MAX_FILE_SIZE:
         raise ValidationError(
-            f'File size too large. Max size is {filesizeformat(MAX_FILE_SIZE)}.'
+            f"File size too large. Max size is {filesizeformat(MAX_FILE_SIZE)}."
         )
-
-    # Validate MIME type if python-magic is available
     try:
-        import magic
-        mime_type = magic.from_buffer(value.read(1024), mime=True)
         value.seek(0)
-        if mime_type not in ALLOWED_MIME_TYPES:
-            raise ValidationError(
-                f'Unsupported file type: {mime_type}. Allowed: {" ".join(ALLOWED_MIME_TYPES)}'
-            )
-    except ImportError:
-        # python-magic not available, skip MIME validation
-        value.seek(0)
-    except Exception as e:
-        raise ValidationError(f"File validation error: {str(e)}")
-
+        img = Image.open(value)
+        img.verify()  
+    except Exception:
+        raise ValidationError("Uploaded file is not a valid image.")
+    finally:
+        value.seek(0) 
 
 class Contact(models.Model):
     """Store contact form submissions."""
