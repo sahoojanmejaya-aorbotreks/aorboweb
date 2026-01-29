@@ -18,7 +18,7 @@ DEBUG = config('DEBUG', default='False', cast=lambda x: x.lower() in ('true', '1
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,16.170.247.251'
+    default='localhost,127.0.0.1,16.170.247.251',
     cast=lambda x: [i.strip() for i in x.split(',')]
 )
 CSRF_TRUSTED_ORIGINS = [
