@@ -421,3 +421,4 @@ def user_agreement(request):
     """Render user agreement page."""
     return render(request, "user_agreement.html")
 
+def 

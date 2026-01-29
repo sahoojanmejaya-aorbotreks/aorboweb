@@ -451,22 +451,70 @@ class TrekPoint(models.Model):
     name = models.CharField(max_length=200)
     def __str__(self): return self.name
 
+# class TrekList(models.Model):
+#     id = models.SlugField(primary_key=True, editable=False)
+#     name = models.CharField(max_length=200)
+#     state = models.CharField(max_length=100, blank=True, null=True)
+#     is_pinned = models.BooleanField(default=False)
+#     pin_priority = models.PositiveIntegerField(
+#         blank=True,
+#         null=True,
+#         help_text="Lower number = higher priority (1 comes first)"
+#     )
+#     image = models.CharField(max_length=500, blank=True, null=True)
+#     hero_image = models.CharField(max_length=500, blank=True, null=True)
+#     duration_days = models.CharField(max_length=100, blank=True, null=True)
+#     price_start = models.PositiveIntegerField(blank=True, null=True)
+#     currency = models.CharField(max_length=10, default="INR")
+#     operating_days = models.CharField(max_length=200, blank=True, null=True, )
+
+#     tags = models.ManyToManyField(Tag, blank=True)
+#     operators = models.ManyToManyField(Operator, blank=True)
+#     trek_points = models.ManyToManyField(TrekPoint, blank=True)
+
+#     short_desc = models.TextField(blank=True, null=True)
+#     highlights = models.TextField(blank=True, null=True)
+#     activities = models.TextField(blank=True, null=True)
+#     related_treks = models.ManyToManyField('self', blank=True)
+
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     def save(self, *args, **kwargs):
+#         if not self.id:
+#             base_slug = slugify(self.name)
+#             slug = base_slug
+#             counter = 1
+
+#             while TrekList.objects.filter(id=slug).exists():
+#                 slug = f"{base_slug}-{counter}"
+#                 counter += 1
+
+#             self.id = slug
+
+#         super().save(*args, **kwargs)
+
+#     def __str__(self):
+#         return self.name
+
 class TrekList(models.Model):
     id = models.SlugField(primary_key=True, editable=False)
     name = models.CharField(max_length=200)
     state = models.CharField(max_length=100, blank=True, null=True)
+
     is_pinned = models.BooleanField(default=False)
     pin_priority = models.PositiveIntegerField(
         blank=True,
         null=True,
         help_text="Lower number = higher priority (1 comes first)"
     )
+
     image = models.CharField(max_length=500, blank=True, null=True)
     hero_image = models.CharField(max_length=500, blank=True, null=True)
     duration_days = models.CharField(max_length=100, blank=True, null=True)
+
     price_start = models.PositiveIntegerField(blank=True, null=True)
     currency = models.CharField(max_length=10, default="INR")
-    operating_days = models.CharField(max_length=200, blank=True, null=True, )
+    operating_days = models.CharField(max_length=200, blank=True, null=True)
 
     tags = models.ManyToManyField(Tag, blank=True)
     operators = models.ManyToManyField(Operator, blank=True)
@@ -474,9 +522,12 @@ class TrekList(models.Model):
 
     short_desc = models.TextField(blank=True, null=True)
     highlights = models.TextField(blank=True, null=True)
-    activities = models.TextField(blank=True, null=True)
+    activities = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Comma-separated values. Example: Trekking, Camping, Bonfire"
+    )
     related_treks = models.ManyToManyField('self', blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
@@ -493,8 +544,15 @@ class TrekList(models.Model):
 
         super().save(*args, **kwargs)
 
+    @property
+    def activities_list(self):
+        if not self.activities:
+            return []
+        return [a.strip() for a in self.activities.split(",") if a.strip()]
+
     def __str__(self):
         return self.name
+
  
 class TrekImage(models.Model):
     trek = models.ForeignKey(

@@ -125,15 +125,24 @@
             </div>
             {% endif %}
 
-            {% if trek.activities %}
+            {% comment %} {% if trek.activities %}
             <div class="col-6">
               <h6>Activities</h6>
               <ul class="ps-1 small">
                 {{ trek.activities|safe }}
               </ul>
             </div>
+            {% endif %} {% endcomment %}
+            {% if trek.activities_list %}
+            <div class="col-6">
+              <h6>Activities</h6>
+              <ul class="ps-1 small">
+                {% for activity in trek.activities_list %}
+                  <li>{{ activity }}</li>
+                {% endfor %}
+              </ul>
+            </div>
             {% endif %}
-
           </div>
 
         </div>
