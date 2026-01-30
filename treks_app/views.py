@@ -1,3 +1,4 @@
+from linecache import cache
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -8,6 +9,7 @@ from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.views.decorators.cache import cache_page
 from datetime import datetime
 import difflib
 import re
@@ -21,22 +23,25 @@ from .models import (
 
 
 def get_featured_treks():
-    return TrekList.objects.annotate(
-        pin_order=Case(
-            When(is_pinned=True, then=0),
-            default=1,
-            output_field=IntegerField()
+    return (
+        TrekList.objects
+        .select_related()                 # FK optimization
+        .prefetch_related('tags')         # M2M optimization
+        .annotate(
+            pin_order=Case(
+                When(is_pinned=True, then=0),
+                default=1,
+                output_field=IntegerField()
+            )
         )
-    ).order_by(
-        'pin_order',
-        'pin_priority',
-        '-created_at'
+        .order_by('pin_order', 'pin_priority', '-created_at')
     )
 
 
+
+@cache_page(60 * 10) 
 def home(request):
     all_featured_treks = get_featured_treks()
-
     paginator = Paginator(all_featured_treks, 8)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
@@ -44,7 +49,16 @@ def home(request):
     featured_testimonials = Testimonial.objects.filter(is_featured=True)[:6]
     featured_blogs = Blog.objects.filter(is_featured=True)[:3]
     banners = HomepageBanner.objects.filter(is_active=True).order_by('order')
-    faqs = FAQ.objects.all().order_by('category', 'order')
+    faq_categories = cache.get("faq_categories")
+    if not faq_categories:
+        faqs = FAQ.objects.all().order_by('category', 'order')
+        faq_categories = {}
+
+        for faq in faqs:
+            faq_categories.setdefault(faq.category, []).append(faq)
+
+        cache.set("faq_categories", faq_categories, 60 * 60)  # 1 hour
+
     whats_new = WhatsNew.objects.all().order_by('-created_at')[:5]
     top_treks = TopTrek.objects.all()[:6]
 
@@ -52,7 +66,7 @@ def home(request):
     for faq in faqs:
         faq_categories.setdefault(faq.category, []).append(faq)
 
-    context = {
+    return render(request, 'index.html', {
         'featured_treks': page_obj.object_list,
         'page_obj': page_obj,
         'featured_testimonials': featured_testimonials,
@@ -61,9 +75,7 @@ def home(request):
         'faq_categories': faq_categories,
         'whats_new': whats_new,
         'top_treks': top_treks,
-    }
-
-    return render(request, 'index.html', context)
+    })
 
 
 STOP_WORDS = {
@@ -118,7 +130,6 @@ def typo_score(query, text):
     )
 
 
-
 def search_trek(request):
     query = request.GET.get("q", "").strip()
     if not query:
@@ -147,8 +158,69 @@ def search_trek(request):
     return redirect("home")
 
 
+# def search_suggestions(request):
+#     """Return trek suggestions based on search query with fuzzy matching."""
+#     query = request.GET.get("q", "").strip()
+
+#     if len(query) < 2:
+#         return JsonResponse({"results": []})
+
+#     query_n = normalize_text(query)
+#     MAX_RESULTS = 8
+#     scored = []
+
+#     treks = TrekList.objects.all().only("id", "name", "state")
+
+#     for trek in treks:
+#         name = trek.name or ""
+#         state = trek.state or ""
+
+#         score = 0
+
+#         # Exact prefix match
+#         if name.lower().startswith(query_n):
+#             score += 120
+
+#         # Word prefix match
+#         for word in name.lower().split():
+#             if word.startswith(query_n):
+#                 score += 90
+
+#         # Typo tolerance
+#         score = max(score, typo_score(query_n, name))
+
+#         # State match bonus
+#         score = max(score, typo_score(query_n, state) - 10)
+
+#         if score >= 55:
+#             scored.append((score, trek))
+
+#     scored.sort(key=lambda x: x[0], reverse=True)
+
+#     results = []
+#     seen = set()
+
+#     for score, trek in scored[:MAX_RESULTS]:
+#         if trek.id in seen:
+#             continue
+
+#         results.append({
+#             "label": trek.name,
+#             "type": "trek",
+#             "url": reverse("card_trek_detail", args=[trek.id]),
+#         })
+#         seen.add(trek.id)
+
+#     if results:
+#         results.append({
+#             "label": f"Best treks near {query}",
+#             "type": "intent",
+#             "url": reverse("search_trek") + f"?q={query}",
+#         })
+
+#     return JsonResponse({"results": results})
+
 def search_suggestions(request):
-    """Return trek suggestions based on search query with fuzzy matching."""
     query = request.GET.get("q", "").strip()
 
     if len(query) < 2:
@@ -158,28 +230,29 @@ def search_suggestions(request):
     MAX_RESULTS = 8
     scored = []
 
-    treks = TrekList.objects.all().only("id", "name", "state")
+    treks = (
+        TrekList.objects
+        .filter(name__istartswith=query_n)
+        .only("id", "name", "state")[:30]
+    )
 
     for trek in treks:
         name = trek.name or ""
         state = trek.state or ""
-
         score = 0
 
-        # Exact prefix match
         if name.lower().startswith(query_n):
             score += 120
 
-        # Word prefix match
         for word in name.lower().split():
             if word.startswith(query_n):
                 score += 90
 
-        # Typo tolerance
-        score = max(score, typo_score(query_n, name))
+        if score < 80:
+            score = max(score, typo_score(query_n, name))
 
-        # State match bonus
-        score = max(score, typo_score(query_n, state) - 10)
+        if score < 60 and state:
+            score = max(score, typo_score(query_n, state) - 10)
 
         if score >= 55:
             scored.append((score, trek))
@@ -216,17 +289,18 @@ def about(request):
     })
 
 def blogs(request):
-    paginator = Paginator(Blog.objects.order_by('-created_at'), 6)
+    paginator = Paginator(
+    Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 6)
     return render(request, 'blogs.html', {
         'blogs': paginator.get_page(request.GET.get('page'))
-    })
+        })
 
 def blog_detail(request, slug):
     blog = get_object_or_404(Blog, slug=slug)
     return render(request, 'blog_detail.html', {
         'blog': blog,
-        'recent_blogs': Blog.objects.exclude(id=blog.id)[:3]
-    })
+        'recent_blogs': (Blog.objects.only("title", "slug").exclude(id=blog.id)[:3])
+        })
 
 def treks(request):
     category_id = request.GET.get('category')
@@ -288,10 +362,7 @@ def contact(request):
 
     if request.method == "GET":
         return render(request, "contact.html")
-
-    # -------------------------
-    # FORM DATA
-    # -------------------------
+    
     name = request.POST.get("name")
     email = request.POST.get("email")
     mobile = request.POST.get("mobile")
@@ -309,9 +380,6 @@ def contact(request):
         user_type=user_type, comment=message
     )
 
-    # -------------------------
-    # TREK LINKS
-    # -------------------------
     TREK_LINKS = {
         "adventure": "https://www.aorbotreks.com/travel-your-way/?tag=adventure",
         "camping": "https://www.aorbotreks.com/travel-your-way/?tag=camping",
@@ -320,10 +388,6 @@ def contact(request):
         "spiritual": "https://www.aorbotreks.com/travel-your-way/?tag=spiritual",
         "weekend": "https://www.aorbotreks.com/travel-your-way/?tag=weekend",
     }
-
-    # -------------------------
-    # LOGIC PER USER TYPE
-    # -------------------------
     detected_category = None
     explore_link = "https://www.aorbotreks.com"
     subject = "We've Received Your Query – Aorbo Treks"
@@ -405,6 +469,7 @@ def card_trek_detail(request, slug):
         "related_treks": related_treks,
         "activities_list": activities_list,
     })
+
 
 
 def privacy_policy(request):
