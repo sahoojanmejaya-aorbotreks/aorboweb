@@ -179,6 +179,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}
+
+
 # Localhost should only be in DEBUG mode for local development
 CORS_ORIGIN_ALLOW_ALL = False
 
@@ -284,6 +291,8 @@ CONTENT_SECURITY_POLICY = {
     }
 }
 
+
+
 if DEBUG:
     # Allow localhost for development only
     for directive in ["script-src", "style-src", "img-src", "font-src", "connect-src"]:
@@ -293,7 +302,6 @@ if DEBUG:
 SIMPLE_JWT = {
     'TOKEN_OBTAIN_PAIR_SERIALIZER': 'aorbo_project.serializers.MyTokenObtainPairSerializer',
 }
-
 
 
 
