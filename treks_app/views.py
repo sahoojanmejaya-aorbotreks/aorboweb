@@ -1,4 +1,3 @@
-from linecache import cache
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -7,26 +6,31 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.db.models import Q, Case, When, IntegerField
 from django.conf import settings
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from datetime import datetime
 import difflib
-import re
-from html import escape
+import threading
 
 from .models import (
-    Contact, Blog, TrekCategory, TrekOrganizer, Trek, 
-    Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
-    SocialMedia, ContactInfo, WhatsNew, TopTrek, TrekList
+    Contact, Blog, TrekCategory, Trek, 
+    Testimonial, FAQ, SafetyTip, TeamMember,
+    HomepageBanner, WhatsNew, TopTrek, TrekList
 )
+
+def send_email_async(mail):
+    threading.Thread(target=mail.send).start()
 
 
 def get_featured_treks():
-    return (
+    cache_key = "featured_treks_qs"
+    qs = cache.get(cache_key)
+
+    if qs is not None:
+        return qs
+
+    qs = (
         TrekList.objects
-        .select_related()                 # FK optimization
-        .prefetch_related('tags')         # M2M optimization
+        .prefetch_related('tags')
         .annotate(
             pin_order=Case(
                 When(is_pinned=True, then=0),
@@ -37,97 +41,75 @@ def get_featured_treks():
         .order_by('pin_order', 'pin_priority', '-created_at')
     )
 
+    cache.set(cache_key, qs, 60 * 10)  
+    return qs
 
 
-@cache_page(60 * 10) 
+def get_trek_categories():
+    cache_key = "trek_categories_all"
+    categories = cache.get(cache_key)
+
+    if categories is None:
+        categories = TrekCategory.objects.all()
+        cache.set(cache_key, categories, 60 * 60)
+
+    return categories
+
 def home(request):
-    all_featured_treks = get_featured_treks()
-    paginator = Paginator(all_featured_treks, 8)
     page_number = request.GET.get('page', 1)
+    cache_key = f"home_page_{page_number}"
+    cached_context = cache.get(cache_key)
+
+    if cached_context:
+        return render(request, 'index.html', cached_context)
+
+    paginator = Paginator(get_featured_treks(), 8)
     page_obj = paginator.get_page(page_number)
 
-    featured_testimonials = Testimonial.objects.filter(is_featured=True)[:6]
-    featured_blogs = Blog.objects.filter(is_featured=True)[:3]
-    banners = HomepageBanner.objects.filter(is_active=True).order_by('order')
     faq_categories = cache.get("faq_categories")
     if not faq_categories:
-        faqs = FAQ.objects.all().order_by('category', 'order')
         faq_categories = {}
-
-        for faq in faqs:
+        for faq in FAQ.objects.all().order_by('category', 'order'):
             faq_categories.setdefault(faq.category, []).append(faq)
+        cache.set("faq_categories", faq_categories, 60 * 60)
 
-        cache.set("faq_categories", faq_categories, 60 * 60)  # 1 hour
-
-    whats_new = WhatsNew.objects.all().order_by('-created_at')[:5]
-    top_treks = TopTrek.objects.all()[:6]
-
-    faq_categories = {}
-    for faq in faqs:
-        faq_categories.setdefault(faq.category, []).append(faq)
-
-    return render(request, 'index.html', {
+    context = {
         'featured_treks': page_obj.object_list,
         'page_obj': page_obj,
-        'featured_testimonials': featured_testimonials,
-        'featured_blogs': featured_blogs,
-        'banners': banners,
+        'featured_testimonials': Testimonial.objects.filter(is_featured=True)[:6],
+        'featured_blogs': Blog.objects.filter(is_featured=True)[:3],
+        'banners': HomepageBanner.objects.filter(is_active=True).order_by('order'),
         'faq_categories': faq_categories,
-        'whats_new': whats_new,
-        'top_treks': top_treks,
-    })
+        'whats_new': WhatsNew.objects.all().order_by('-created_at')[:5],
+        'top_treks': TopTrek.objects.all()[:6],
+    }
+
+    cache.set(cache_key, context, 60 * 10)
+    return render(request, 'index.html', context)
 
 
-STOP_WORDS = {
-    "best", "top", "places", "place", "near",
-    "visit", "to", "trip", "trips", "treks", "trek"
-}
-
+STOP_WORDS = {"best", "top", "places", "place", "near", "visit", "to", "trip", "trips", "treks", "trek"}
 
 def normalize_text(text):
-    """Normalize text to lowercase and strip whitespace."""
     return text.lower().strip()
 
-
 def clean_query(query):
-    """Remove stop words from query string."""
-    words = normalize_text(query).split()
-    return " ".join(w for w in words if w not in STOP_WORDS)
-
+    return " ".join(w for w in normalize_text(query).split() if w not in STOP_WORDS)
 
 def score_match(query, text):
-    """Calculate relevance score between query and text."""
-    query = normalize_text(query)
-    text = normalize_text(text)
-
+    query, text = normalize_text(query), normalize_text(text)
     score = 0
-
-    if text == query:
-        score += 120
-    if text.startswith(query):
-        score += 100
-    if any(word.startswith(query) for word in text.split()):
-        score += 80
-    if query in text:
-        score += 60
-
-    # Typo tolerance fallback
-    similarity = difflib.SequenceMatcher(None, query, text).ratio()
-    if similarity > 0.6:
-        score += int(similarity * 40)
-
+    if text == query: score += 120
+    if text.startswith(query): score += 100
+    if any(w.startswith(query) for w in text.split()): score += 80
+    if query in text: score += 60
+    sim = difflib.SequenceMatcher(None, query, text).ratio()
+    if sim > 0.6:
+        score += int(sim * 40)
     return score
 
-
 def typo_score(query, text):
-    """Calculate similarity score using sequence matching."""
-    return int(
-        difflib.SequenceMatcher(
-            None,
-            normalize_text(query),
-            normalize_text(text)
-        ).ratio() * 100
-    )
+    return int(difflib.SequenceMatcher(None, query, text).ratio() * 100)
 
 
 def search_trek(request):
@@ -139,18 +121,17 @@ def search_trek(request):
     if not cleaned_query:
         return redirect("home")
 
-    treks = TrekList.objects.filter(
-        Q(name__icontains=cleaned_query) |
-        Q(state__icontains=cleaned_query) |
-        Q(tags__name__icontains=cleaned_query) |
-        Q(trek_points__name__icontains=cleaned_query)
-    ).distinct()
-
-    ranked = sorted(
-        treks,
-        key=lambda t: score_match(cleaned_query, t.name),
-        reverse=True
+    treks = (
+        TrekList.objects
+        .filter(
+            Q(name__icontains=cleaned_query) |
+            Q(state__icontains=cleaned_query) |
+            Q(tags__name__icontains=cleaned_query)
+        )
+        .distinct()[:50] 
     )
+
+    ranked = sorted(treks, key=lambda t: score_match(cleaned_query, t.name), reverse=True)
 
     if ranked:
         return redirect("card_trek_detail", ranked[0].id)
@@ -158,67 +139,6 @@ def search_trek(request):
     return redirect("home")
 
 
-# def search_suggestions(request):
-#     """Return trek suggestions based on search query with fuzzy matching."""
-#     query = request.GET.get("q", "").strip()
-
-#     if len(query) < 2:
-#         return JsonResponse({"results": []})
-
-#     query_n = normalize_text(query)
-#     MAX_RESULTS = 8
-#     scored = []
-
-#     treks = TrekList.objects.all().only("id", "name", "state")
-
-#     for trek in treks:
-#         name = trek.name or ""
-#         state = trek.state or ""
-
-#         score = 0
-
-#         # Exact prefix match
-#         if name.lower().startswith(query_n):
-#             score += 120
-
-#         # Word prefix match
-#         for word in name.lower().split():
-#             if word.startswith(query_n):
-#                 score += 90
-
-#         # Typo tolerance
-#         score = max(score, typo_score(query_n, name))
-
-#         # State match bonus
-#         score = max(score, typo_score(query_n, state) - 10)
-
-#         if score >= 55:
-#             scored.append((score, trek))
-
-#     scored.sort(key=lambda x: x[0], reverse=True)
-
-#     results = []
-#     seen = set()
-
-#     for score, trek in scored[:MAX_RESULTS]:
-#         if trek.id in seen:
-#             continue
-
-#         results.append({
-#             "label": trek.name,
-#             "type": "trek",
-#             "url": reverse("card_trek_detail", args=[trek.id]),
-#         })
-#         seen.add(trek.id)
-
-#     if results:
-#         results.append({
-#             "label": f"Best treks near {query}",
-#             "type": "intent",
-#             "url": reverse("search_trek") + f"?q={query}",
-#         })
-
-#     return JsonResponse({"results": results})
 
 def search_suggestions(request):
     query = request.GET.get("q", "").strip()
@@ -226,7 +146,12 @@ def search_suggestions(request):
     if len(query) < 2:
         return JsonResponse({"results": []})
 
-    query_n = normalize_text(query)
+    # Cache search suggestions for 30 minutes
+    cache_key = f"search_suggestions_{query_n := normalize_text(query)}"
+    cached_results = cache.get(cache_key)
+    if cached_results:
+        return JsonResponse(cached_results)
+
     MAX_RESULTS = 8
     scored = []
 
@@ -280,20 +205,40 @@ def search_suggestions(request):
             "url": reverse("search_trek") + f"?q={query}",
         })
 
-    return JsonResponse({"results": results})
-
+    response_data = {"results": results}
+    cache.set(cache_key, response_data, 60 * 30) 
+    return JsonResponse(response_data)
 
 def about(request):
+    """Render about page with cached team members."""
+    cache_key = "about_page_team_members"
+    team_members = cache.get(cache_key)
+    
+    if not team_members:
+        team_members = TeamMember.objects.all().order_by('order')
+        cache.set(cache_key, team_members, 60 * 60)  # 1 hour
+    
     return render(request, 'about.html', {
-        'team_members': TeamMember.objects.all().order_by('order')
+        'team_members': team_members
     })
 
 def blogs(request):
+    """Render blogs page with pagination and caching."""
+    page_number = request.GET.get('page', 1)
+    cache_key = f"blogs_page_{page_number}"
+    cached_page = cache.get(cache_key)
+    
+    if cached_page:
+        return render(request, 'blogs.html', {'blogs': cached_page})
+    
     paginator = Paginator(
-    Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 6)
+        Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 6)
+    page_obj = paginator.get_page(page_number)
+    
+    cache.set(cache_key, page_obj, 60 * 30) 
     return render(request, 'blogs.html', {
-        'blogs': paginator.get_page(request.GET.get('page'))
-        })
+        'blogs': page_obj
+    })
 
 def blog_detail(request, slug):
     blog = get_object_or_404(Blog, slug=slug)
@@ -305,34 +250,62 @@ def blog_detail(request, slug):
 def treks(request):
     category_id = request.GET.get('category')
     difficulty = request.GET.get('difficulty')
+    page_number = request.GET.get('page', 1)
 
-    all_treks = Trek.objects.all()
+    cache_key = f"treks_{page_number}_{category_id}_{difficulty}"
+    cached = cache.get(cache_key)
+    if cached:
+        return render(request, 'treks.html', cached)
+
+    qs = Trek.objects.all()
     if category_id:
-        all_treks = all_treks.filter(category_id=category_id)
+        qs = qs.filter(category_id=category_id)
     if difficulty:
-        all_treks = all_treks.filter(difficulty=difficulty)
+        qs = qs.filter(difficulty=difficulty)
 
-    paginator = Paginator(all_treks, 12)
+    paginator = Paginator(qs, 12)
+    page_obj = paginator.get_page(page_number)
 
-    return render(request, 'treks.html', {
-        'treks': paginator.get_page(request.GET.get('page')),
-        'categories': TrekCategory.objects.all(),
+    context = {
+        'treks': page_obj,
+        'categories': get_trek_categories(),
         'selected_category': category_id,
         'selected_difficulty': difficulty,
         'difficulty_choices': Trek.DIFFICULTY_CHOICES,
-    })
+    }
+
+    cache.set(cache_key, context, 60 * 30)
+    return render(request, 'treks.html', context)
 
 def trek_detail(request, slug):
+    """Display detailed view of a trek with caching."""
+    cache_key = f"trek_detail_{slug}"
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        return render(request, 'trek_detail.html', cached_data)
+    
     trek = get_object_or_404(Trek, slug=slug)
-    return render(request, 'trek_detail.html', {
+    context = {
         'trek': trek,
         'testimonials': trek.testimonials.all(),
         'similar_treks': Trek.objects.filter(category=trek.category).exclude(id=trek.id)[:3],
-    })
+    }
+    
+    cache.set(cache_key, context, 60 * 60)  # 1 hour
+    return render(request, 'trek_detail.html', context)
 
 def safety(request):
+    """Render safety page with cached safety tips."""
+    cache_key = "safety_page_tips"
+    safety_tips = cache.get(cache_key)
+    
+    if not safety_tips:
+        safety_tips = SafetyTip.objects.all().order_by('order')
+        cache.set(cache_key, safety_tips, 60 * 60)  # 1 hour
+    
     return render(request, 'safety.html', {
-        'safety_tips': SafetyTip.objects.all().order_by('order')
+        'safety_tips': safety_tips
     })
 
 def detect_trek_category(message: str):
@@ -438,7 +411,8 @@ def contact(request):
             to=[email],
         )
         mail.attach_alternative(html_content, "text/html")
-        mail.send()
+        # mail.send()
+        send_email_async(mail)
     except Exception as e:
         return JsonResponse({"error": f"Failed to send email: {str(e)}"}, status=500)
 
@@ -471,18 +445,11 @@ def card_trek_detail(request, slug):
     })
 
 
-
 def privacy_policy(request):
-    """Render privacy policy page."""
     return render(request, "privacypolicy.html")
 
-
 def terms_and_conditions(request):
-    """Render terms and conditions page."""
     return render(request, "terms_and_conditions.html")
 
-
 def user_agreement(request):
-    """Render user agreement page."""
     return render(request, "user_agreement.html")
-
