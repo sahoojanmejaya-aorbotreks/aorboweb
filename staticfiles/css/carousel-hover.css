@@ -1,0 +1,99 @@
+/* Carousel styling to match original wireframe */
+
+
+
+/* Common carousel styling */
+.carousel-container {
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.carousel-track {
+    display: flex;
+    gap: 20px;
+    transition: transform 0.5s ease, opacity 0.2s ease;
+    user-select: none;
+    touch-action: pan-y;
+}
+
+.carousel-slide {
+    min-width: calc((100% - 40px) / 3);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    background: white;
+    
+}
+
+
+.carousel-slide.active {
+    opacity: 1;
+}
+
+.whats-new .carousel-slide img {
+    display: block;
+    margin: 0 auto; 
+    max-width: 100%;
+    height: auto;
+}
+
+.carousel-slide img {
+    margin-bottom: 15px;
+    align-items:center!important;
+    width:131px;
+    height:131px;
+    object-fit: cover;
+}
+
+.slide-content {
+    text-align: left;
+}
+
+.img-fluid {
+    max-width: 100%;
+    height: auto;
+}
+.slide-content h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.slide-content p {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+
+@media (max-width: 1024px) {
+    .carousel-slide {
+        flex: 0 0 calc((100% - 20px) / 2);
+        min-width: calc((100% - 20px) / 2);
+    }
+}
+
+@media (max-width: 768px) {
+    .carousel-slide {
+        flex: 0 0 100%;
+        min-width: 100%;
+    }
+    
+    .carousel-container {
+        padding: 0 10px;
+    }
+}
+
+    .px-1 {
+    padding-right: 0.25rem !important;
+    padding-left: 2.25rem !important;
+}
+.py-5{
+   padding-top: 3rem !important;
+    padding-bottom: 0px!important;
+}
+
