@@ -147,7 +147,9 @@ def search_suggestions(request):
         return JsonResponse({"results": []})
 
     # Cache search suggestions for 30 minutes
-    cache_key = f"search_suggestions_{query_n := normalize_text(query)}"
+    query_n = normalize_text(query)
+    cache_key = f"search_suggestions_{query_n}"
+
     cached_results = cache.get(cache_key)
     if cached_results:
         return JsonResponse(cached_results)
