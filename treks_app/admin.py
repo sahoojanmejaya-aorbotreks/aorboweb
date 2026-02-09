@@ -27,8 +27,20 @@ class ContactAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
     date_hierarchy = 'created_at'
 
+class BlogAdminForm(forms.ModelForm):
+    image_upload = forms.ImageField(
+        required=False,
+        help_text="Upload image (stored in Supabase as WebP)"
+    )
+
+    class Meta:
+        model = Blog
+        fields = "__all__"
+        
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
+    form = BlogAdminForm
+
     list_display = ('title', 'author', 'created_at', 'is_featured', 'image_preview')
     list_filter = ('is_featured', 'created_at')
     search_fields = ('title', 'content', 'author')
@@ -52,29 +64,24 @@ class BlogAdmin(admin.ModelAdmin):
         }),
     )
 
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        form.base_fields['image_upload'] = forms.ImageField(
-            required=False,
-            help_text="Upload image (stored in Supabase as WebP)"
-        )
-        return form
-
     def save_model(self, request, obj, form, change):
         image = form.cleaned_data.get('image_upload')
 
         if image:
             bucket = supabase.storage.from_("blogs")
 
+            # 🔥 delete old images if editing
             if change and obj.image_url:
                 base_url = bucket.get_public_url("").rstrip("/") + "/"
 
-                old_main_path = obj.image_url.replace(base_url, "", 1)
-                bucket.remove([old_main_path])
+                bucket.remove([
+                    obj.image_url.replace(base_url, "", 1)
+                ])
 
                 if obj.original_image_url:
-                    old_original_path = obj.original_image_url.replace(base_url, "", 1)
-                    bucket.remove([old_original_path])
+                    bucket.remove([
+                        obj.original_image_url.replace(base_url, "", 1)
+                    ])
 
             obj.image_url, obj.original_image_url = obj.upload_to_supabase(image)
 
@@ -83,13 +90,12 @@ class BlogAdmin(admin.ModelAdmin):
     def image_preview(self, obj):
         if obj.image_url:
             return format_html(
-                '<img src="{}" style="max-width:150px; border-radius:6px;" />',
+                '<img src="{}" style="max-width:150px;border-radius:6px;" />',
                 obj.image_url
             )
         return "—"
 
     image_preview.short_description = "Image Preview"
-
 
 @admin.register(TrekCategory)
 class TrekCategoryAdmin(admin.ModelAdmin):
