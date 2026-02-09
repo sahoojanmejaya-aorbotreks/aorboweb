@@ -1,121 +1,156 @@
- document.addEventListener('DOMContentLoaded', function() {
-        const blogContent = document.getElementById('blogContent');
-        const tocNav = document.getElementById('toc-nav');
-        
-        if (!blogContent || !tocNav) {
-            console.error('❌ Blog content or TOC nav element not found');
-            return;
-        }
-        
-        // Find only direct h2, h3 headings (not nested in other elements)
-        const headings = Array.from(blogContent.querySelectorAll('h2, h3'));
-        
-        // Filter to remove duplicates (same text, same level)
-        const uniqueHeadings = [];
-        const seenHeadings = new Set();
-        
-        headings.forEach(heading => {
-            const key = `${heading.tagName}-${heading.textContent.trim()}`;
-            if (!seenHeadings.has(key)) {
-                seenHeadings.add(key);
-                uniqueHeadings.push(heading);
-            }
-        });
-        
-        console.log('Found headings:', headings.length);
-        console.log('Unique headings:', uniqueHeadings.length);
-        
-        if (uniqueHeadings.length > 0) {
-            uniqueHeadings.forEach((heading, index) => {
-                const id = heading.id || `section-${index}`;
-                heading.id = id;
-                
-                const a = document.createElement('a');
-                a.href = `#${id}`;
-                a.className = 'sidebar-link';
-                a.textContent = heading.textContent;
-                tocNav.appendChild(a);
-                console.log(`✓ Added TOC link: ${heading.textContent.substring(0, 30)}`);
-            });
-            console.log('✓ Table of Contents populated successfully');
-            tocNav.style.display = 'block';
-        } else {
-            console.warn('⚠️ No headings (h2, h3) found in blog content');
-            tocNav.innerHTML = '<p style="font-size: 12px; color: #999;">No headings found in this article</p>';
-        }
+document.addEventListener('DOMContentLoaded', function () {
 
-        // Share buttons (use data-share attribute for order-independent behavior)
-        const shareButtons = document.querySelectorAll('.share-btn');
-        const currentUrl = window.location.href;
-        const titleElement = document.querySelector('.blog-title');
-        const pageTitle = titleElement ? titleElement.textContent.trim() : document.title;
+    /* ======================================================
+       SEO: Blog BreadcrumbList Schema (CTR boost)
+       ====================================================== */
+    (function injectBlogBreadcrumbSchema() {
+        if (document.getElementById('aorbo-blog-breadcrumb')) return;
 
-        function flashButton(btn, message) {
-            const original = btn.innerHTML;
-            btn.innerHTML = `<span>${message}</span>`;
-            btn.setAttribute('aria-live', 'polite');
-            btn.classList.add('share-feedback');
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.classList.remove('share-feedback');
-            }, 2000);
-        }
+        const titleEl = document.querySelector('.blog-title');
+        if (!titleEl) return;
 
-        shareButtons.forEach(btn => {
-            const type = btn.dataset.share;
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (type === 'facebook') {
-                    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
-                    window.open(url, '_blank', 'width=600,height=400,noopener,noreferrer');
-                } else if (type === 'twitter') {
-                    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(pageTitle)}`;
-                    window.open(url, '_blank', 'width=600,height=400,noopener,noreferrer');
-                } else if (type === 'linkedin') {
-                    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
-                    window.open(url, '_blank', 'width=600,height=400,noopener,noreferrer');
-                } else if (type === 'copy') {
-                    navigator.clipboard.writeText(currentUrl).then(() => {
-                        flashButton(btn, '✓ Copied');
-                    }).catch(() => {
-                        // fallback for older browsers
-                        flashButton(btn, 'Copied');
-                    });
+        const schema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "https://aorbotreks.com/"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Blogs",
+                    "item": "https://aorbotreks.com/blogs/"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": titleEl.textContent.trim(),
+                    "item": window.location.href
                 }
-            });
-        });
+            ]
+        };
 
-        // Scrollspy: highlight TOC link for visible headings
-        const tocLinks = Array.from(document.querySelectorAll('#toc-nav .sidebar-link'));
-        const headingMap = new Map();
-        tocLinks.forEach(link => {
-            const targetId = link.getAttribute('href') && link.getAttribute('href').slice(1);
-            if (targetId) {
-                const el = document.getElementById(targetId);
-                if (el) headingMap.set(targetId, { link, el });
-                // make link use smooth scroll with offset handled by CSS scroll-margin-top
-                link.addEventListener('click', (ev) => {
-                    ev.preventDefault();
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // focus for keyboard users
-                    setTimeout(() => el.focus({ preventScroll: true }), 300);
-                });
-            }
-        });
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.id = 'aorbo-blog-breadcrumb';
+        script.textContent = JSON.stringify(schema);
+        document.head.appendChild(script);
+    })();
 
-        if ('IntersectionObserver' in window && headingMap.size > 0) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    const id = entry.target.id;
-                    const item = headingMap.get(id);
-                    if (!item) return;
-                    if (entry.isIntersecting) {
-                        tocLinks.forEach(l => l.classList.remove('active'));
-                        item.link.classList.add('active');
-                    }
-                });
-            }, { root: null, rootMargin: '0px 0px -60% 0px', threshold: 0 });
+    /* ======================================================
+       TOC GENERATION
+       ====================================================== */
+    const blogContent = document.getElementById('blogContent');
+    const tocNav = document.getElementById('toc-nav');
 
-            headingMap.forEach(({ el }) => observer.observe(el));
+    if (!blogContent || !tocNav) {
+        console.error('❌ Blog content or TOC nav element not found');
+        return;
+    }
+
+    const headings = Array.from(blogContent.querySelectorAll('h2, h3'));
+    const uniqueHeadings = [];
+    const seenHeadings = new Set();
+
+    headings.forEach(heading => {
+        const key = `${heading.tagName}-${heading.textContent.trim()}`;
+        if (!seenHeadings.has(key)) {
+            seenHeadings.add(key);
+            uniqueHeadings.push(heading);
         }
     });
+
+    if (uniqueHeadings.length > 0) {
+        uniqueHeadings.forEach((heading, index) => {
+            const id = heading.id || `section-${index}`;
+            heading.id = id;
+
+            const a = document.createElement('a');
+            a.href = `#${id}`;
+            a.className = 'sidebar-link';
+            a.textContent = heading.textContent;
+            tocNav.appendChild(a);
+        });
+        tocNav.style.display = 'block';
+    } else {
+        tocNav.innerHTML =
+            '<p style="font-size:12px;color:#999;">No headings found in this article</p>';
+    }
+
+    /* ======================================================
+       SHARE BUTTONS
+       ====================================================== */
+    const shareButtons = document.querySelectorAll('.share-btn');
+    const currentUrl = window.location.href;
+    const pageTitle =
+        document.querySelector('.blog-title')?.textContent.trim() || document.title;
+
+    function flashButton(btn, message) {
+        const original = btn.innerHTML;
+        btn.innerHTML = `<span>${message}</span>`;
+        btn.classList.add('share-feedback');
+        setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove('share-feedback');
+        }, 2000);
+    }
+
+    shareButtons.forEach(btn => {
+        const type = btn.dataset.share;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            let url = '';
+            if (type === 'facebook') {
+                url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+            } else if (type === 'twitter') {
+                url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(pageTitle)}`;
+            } else if (type === 'linkedin') {
+                url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`;
+            } else if (type === 'copy') {
+                navigator.clipboard.writeText(currentUrl)
+                    .then(() => flashButton(btn, '✓ Copied'))
+                    .catch(() => flashButton(btn, 'Copied'));
+                return;
+            }
+
+            window.open(url, '_blank', 'width=600,height=400,noopener,noreferrer');
+        });
+    });
+
+    /* ======================================================
+       SCROLLSPY FOR TOC
+       ====================================================== */
+    const tocLinks = Array.from(tocNav.querySelectorAll('.sidebar-link'));
+    const headingMap = new Map();
+
+    tocLinks.forEach(link => {
+        const id = link.getAttribute('href')?.slice(1);
+        const el = document.getElementById(id);
+        if (el) {
+            headingMap.set(id, { link, el });
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => el.focus({ preventScroll: true }), 300);
+            });
+        }
+    });
+
+    if ('IntersectionObserver' in window && headingMap.size) {
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                tocLinks.forEach(l => l.classList.remove('active'));
+                headingMap.get(entry.target.id)?.link.classList.add('active');
+            });
+        }, { rootMargin: '0px 0px -60% 0px' });
+
+        headingMap.forEach(({ el }) => observer.observe(el));
+    }
+
+});

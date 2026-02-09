@@ -32,31 +32,6 @@
 <meta name="twitter:image" content="{{ blog.image_url }}">
 {% endif %}
 
-<!-- Article Schema Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-    "headline": "{{ blog.title|escapejs }}",
-    "description": "{% if blog.excerpt %}{{ blog.excerpt|truncatewords:30|escapejs }}{% else %}{{ blog.title|truncatewords:20|escapejs }}{% endif %}",
-    "image": "{% if blog.image_url %}{{ blog.image_url }}{% else %}{% static 'images/R-logo.webp' %}{% endif %}",
-    "author": {
-        "@type": "Person",
-        "name": "{% if blog.author %}{{ blog.author|escapejs }}{% else %}Aorbo Treks{% endif %}"
-    },
-    "datePublished": "{{ blog.created_at|date:'c' }}",
-    "dateModified": "{% if blog.updated_at %}{{ blog.updated_at|date:'c' }}{% else %}{{ blog.created_at|date:'c' }}{% endif %}",
-  "publisher": {
-    "@type": "Organization",
-    "name": "Aorbo Treks",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "{% static 'images/R-logo.webp' %}"
-    }
-  }
-}
-</script>
-
 <!-- Canonical URL -->
 <link rel="canonical" href="{{ request.build_absolute_uri }}">
 
