@@ -6,27 +6,25 @@
 {% block content %}
 <style>
     .pri {
-        margin-top: 80px;
-        padding: 0px 25px;
+        margin-top: clamp(4rem, 10vw, 5rem);
+        padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 4vw, 1.5rem);
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .pri p {
-        font-size: 12px !important;
-        margin-bottom: 10px;
-    }
-
-    .pri p {
-        font-size: 12px !important;
-        margin-bottom: 10px;
+        font-size: clamp(12px, 1.2vw, 16px) !important;
+        margin-bottom: clamp(0.5rem, 1.5vw, 1rem) !important;
     }
 
     .pri h4 {
-        font-size: 16px !important;
+        font-size: clamp(14px, 2vw, 18px) !important;
         font-weight: 600;
     }
 
     .pri h3 {
-        font-size: 20px !important;
+        font-size: clamp(16px, 2.5vw, 22px) !important;
         font-weight: 600;
     }
 </style>

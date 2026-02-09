@@ -1,4 +1,3 @@
-
 :root {
 
     --primary-color: #FFFF00;
@@ -104,9 +103,9 @@
     padding-right: 0.25rem !important;
     padding-left: 2.25rem !important;
 }
-.py-5{
-   padding-top: 3rem !important;
-    padding-bottom: 0px!important;
+.py-5 {
+    padding-top: clamp(2rem, 4vw, 3rem) !important;
+    padding-bottom: clamp(2rem, 4vw, 3rem) !important;
 }
 
 
@@ -200,8 +199,8 @@ p, a, li, span {
     }
 } */
 
-.aor{
-    padding-left: 70;
+.aor {
+    padding-left: clamp(1rem, 5vw, 4.5rem);
 }
 @media (max-width: 768px) {
   .hero-section {
@@ -218,14 +217,14 @@ p, a, li, span {
   }
 }
 .how {
-    padding-right: .5rem !important;
-    padding-left: 5.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-left: clamp(0.5rem, 5vw, 5.5rem) !important;
 }
 
 @media (max-width: 768px) {
     .how {
-        padding-right: .5rem !important;
-        padding-left: .5rem !important;
+        padding-right: 0.5rem !important;
+        padding-left: 0.5rem !important;
     }
 }
 
@@ -238,7 +237,7 @@ p, a, li, span {
 
 
 .hero_1 {
-    padding-left: 40px;
+    padding-left: clamp(0.5rem, 3vw, 2.5rem);
 }
 
 h1 {
@@ -289,12 +288,11 @@ body::-webkit-scrollbar {
 html,
 body {
     overflow-x: hidden;
-    overflow-y: hidden;
 }
 
 .new_8 {
-    padding-right: .5rem !important;
-    padding-left: 7.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-left: clamp(0.5rem, 6vw, 7.5rem) !important;
 }
 
 .feature {
@@ -493,8 +491,6 @@ body {
     z-index: 100;
 }
 
-
-
 .nav-container {
     max-width: 1440px;
     margin: 0 auto;
@@ -503,9 +499,8 @@ body {
     align-items: center;
 }
 
-
 .nav-logo {
-    height: 40px;
+    height: 50px;
     width: auto;
 }
 
@@ -2017,7 +2012,7 @@ footer {
 
 .footer-column h4 {
     color: #fff;
-    font-size: 1rem;
+    font-size: 14px;
     margin-bottom: 1rem;
 }
 
@@ -2043,7 +2038,7 @@ footer {
 
 .social-icons {
     display: flex;
-    gap: 1rem;
+    gap: 10px;
     margin-top: 0.5rem;
     flex-wrap: wrap;
 }
@@ -2086,12 +2081,12 @@ footer {
 
     .footer-links {
         grid-template-columns: repeat(2, 1fr);
-        text-align: center;
+        text-align:start;
     }
 
-    .footer-column {
+    /* .footer-column {
         min-width: 200px;
-    }
+    } */
 }
 
 @media (max-width: 768px) {
@@ -2100,12 +2095,13 @@ footer {
     }
 
     .footer-links {
+            display: flex;
         grid-template-columns: 1fr;
         gap: 2rem;
     }
 
     .footer-column {
-        text-align: center;
+        text-align:start;
     }
 
     .social-icons {
@@ -3099,4 +3095,3 @@ footer {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     margin-bottom: 2rem;
 }
- 

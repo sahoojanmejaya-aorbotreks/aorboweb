@@ -69,18 +69,21 @@ class Contact(models.Model):
     def __str__(self):
         return f"{self.name} - {self.email}"
     
-
-
 class Blog(models.Model):
-    """Blog articles with watermarked images stored in Supabase."""
+    """Blog articles with WebP images stored ONLY in Supabase (no media files)."""
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
     content = RichTextField()
-    excerpt = models.TextField(max_length=300, blank=True, help_text="Short description for blog listings")
-    image = models.ImageField(upload_to='blogs/', validators=[validate_image_file_extension], blank=True, null=True)
-    original_image = models.ImageField(upload_to='blogs/originals/', validators=[validate_image_file_extension], blank=True, null=True)
-    image_url = models.URLField(blank=True, null=True, editable=False)
-    original_image_url = models.URLField(blank=True, null=True, editable=False)
+    excerpt = models.TextField(
+        max_length=300,
+        blank=True,
+        help_text="Short description for blog listings"
+    )
+
+    image_url = models.URLField(blank=True, null=True)
+    original_image_url = models.URLField(blank=True, null=True)
+
     author = models.CharField(max_length=100)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
@@ -89,80 +92,53 @@ class Blog(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-    def add_watermark(self, image_file):
-        """Add centered watermark with low transparency"""
-        image = Image.open(image_file).convert("RGBA")
-        watermark = Image.open("static/images/R-logo.webp").convert("RGBA")  # your watermark logo
-
-        # Resize watermark to 10% of image width
-        w_ratio = int(image.width * 0.10)
-        watermark = watermark.resize((w_ratio, int(watermark.height * (w_ratio / watermark.width))))
-
-        # Reduce watermark transparency (light transparency)
-        alpha = watermark.split()[3]
-        alpha = ImageEnhance.Brightness(alpha).enhance(0.80)
-        watermark.putalpha(alpha)
-
-        # Position watermark
-        x = (image.width - watermark.width) // 2
-        y = (image.height - watermark.height) // 2
-        image.paste(watermark, (x, y), watermark)
-
-        # Save as WebP in memory
+    def convert_to_webp(self, image_file):
+        image = Image.open(image_file).convert("RGB")
         output = BytesIO()
-        image.convert("RGB").save(output, format="WEBP")
+        image.save(output, format="WEBP", quality=85)
         output.seek(0)
         return output
+
+    def upload_to_supabase(self, image_file):
+        bucket = supabase.storage.from_("blogs")
+        folder = "blogs"
+
+        # original
+        original_webp = self.convert_to_webp(image_file)
+        original_name = f"{uuid.uuid4()}.webp"
+        original_path = f"{folder}/originals/{original_name}"
+
+        bucket.upload(
+            original_path,
+            original_webp.read(),
+            {"content-type": "image/webp"}
+        )
+
+        # main image
+        image_file.seek(0)
+        webp = self.convert_to_webp(image_file)
+        name = f"{uuid.uuid4()}.webp"
+        path = f"{folder}/{name}"
+
+        bucket.upload(
+            path,
+            webp.read(),
+            {"content-type": "image/webp"}
+        )
+
+        return (
+            bucket.get_public_url(path),
+            bucket.get_public_url(original_path)
+        )
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
 
-        bucket, folder = supabase.storage.from_("blogs"), "blogs"
-
-        if self.image:
-            if not self.original_image:
-                original_file_name = f"{uuid.uuid4()}.webp"
-                original_path = f"{folder}/originals/{original_file_name}"
-                
-                self.image.seek(0)
-                file_content = BytesIO(self.image.read())
-                
-                bucket.upload(original_path, file_content.getvalue(), {"content-type": "image/webp"})
-                self.original_image.name = original_path
-                self.original_image_url = bucket.get_public_url(original_path)
-
-            # Apply watermark
-            self.image.seek(0)
-            watermarked_image = self.add_watermark(self.image)
-            file_name = f"{uuid.uuid4()}.webp"
-            path = f"{folder}/{file_name}"
-            bucket.upload(path, watermarked_image.read(), {"content-type": "image/webp"})
-            self.image_url = bucket.get_public_url(path)
-            self.image.name = file_name  
-
-        else:
-            # Remove images if cleared
-            base_url = bucket.get_public_url("").rstrip("/") + "/"
-            if self.image_url:
-                file_path = self.image_url.replace(base_url, "", 1)
-                bucket.remove([file_path])
-            if self.original_image_url:
-                original_path = self.original_image_url.replace(base_url, "", 1)
-                bucket.remove([original_path])
-            self.image = None
-            self.original_image = None
-            self.image_url = None
-            self.original_image_url = None
-
         super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse('blog_detail', kwargs={'slug': self.slug})
 
     def __str__(self):
         return self.title
-
 
 class TrekCategory(models.Model):
     name = models.CharField(max_length=100)
@@ -331,102 +307,6 @@ class ContactInfo(models.Model):
     
     def __str__(self):
         return self.company_name
-
-
-class WhatsNew(models.Model):
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    image = models.ImageField(upload_to="whatsnew/", blank=True, null=True)
-    image_url = models.URLField(blank=True, null=True, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        bucket, folder = supabase.storage.from_("blogs"), "whatsnew"
-
-        if self.image:
-            ext = self.image.name.split('.')[-1].lower()
-            file_name = f"{uuid.uuid4()}.{ext}"
-            path = f"{folder}/{file_name}"
-
-            # Compress image before upload
-            img = Image.open(self.image)
-            img_io = io.BytesIO()
-            if ext in ["jpg", "jpeg"]:
-                img.save(img_io, format="JPEG", optimize=True, quality=70)  # adjust quality
-            elif ext == "png":
-                img.save(img_io, format="PNG", optimize=True)
-            else:
-                img.save(img_io, format=img.format)
-
-            img_io.seek(0)
-
-            mime, _ = mimetypes.guess_type(self.image.name)
-            if not mime:
-                mime = "application/octet-stream"
-
-            bucket.upload(path, img_io.getvalue(), {"content-type": mime})
-            self.image_url = bucket.get_public_url(path)
-            self.image.name = file_name  
-
-        elif not self.image and self.image_url:
-            base_url = bucket.get_public_url("").rstrip("/") + "/"
-            file_path = self.image_url.replace(base_url, "", 1)
-            bucket.remove([file_path])
-            self.image = None
-            self.image_url = None
-
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.title
-
-
-class TopTrek(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    image = models.ImageField(upload_to="toptreks/", blank=True, null=True)
-    image_url = models.URLField(blank=True, null=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        bucket, folder = supabase.storage.from_("blogs"), "toptreks"
-
-        if self.image:
-            ext = self.image.name.split('.')[-1].lower()
-            file_name = f"{uuid.uuid4()}.{ext}"
-            path = f"{folder}/{file_name}"
-
-            # Compress image before upload
-            img = Image.open(self.image)
-            img_io = io.BytesIO()
-            if ext in ["jpg", "jpeg"]:
-                img.save(img_io, format="JPEG", optimize=True, quality=70)
-            elif ext == "png":
-                img.save(img_io, format="PNG", optimize=True)
-            else:
-                img.save(img_io, format=img.format)
-
-            img_io.seek(0)
-
-            mime, _ = mimetypes.guess_type(self.image.name)
-            if not mime:
-                mime = "application/octet-stream"
-
-            bucket.upload(path, img_io.getvalue(), {"content-type": mime})
-            self.image_url = bucket.get_public_url(path)
-            self.image.name = file_name  
-
-        elif not self.image and self.image_url:
-            base = bucket.get_public_url("").rstrip("/") + "/"
-            bucket.remove([self.image_url.replace(base, "", 1)])
-            self.image = None
-            self.image_url = None
-
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
-    
-
 
 class TermsAndConditions(models.Model):
     title = models.CharField(max_length=255, default="Terms and Conditions")

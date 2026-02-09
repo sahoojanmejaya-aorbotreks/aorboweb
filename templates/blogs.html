@@ -10,14 +10,14 @@
     .blogs-container {
         max-width: 1440px;
         margin: 0 auto;
-        padding: 5rem 4% 2rem;
+        padding: clamp(3rem, 5vw, 5rem) clamp(1rem, 4vw, 4%) clamp(1rem, 3vw, 2rem);
     }
 
     .blogs-scroll {
         display: flex;
         overflow-x: auto;
-        gap: 1.5rem;
-        padding-bottom: 1.5rem;
+        gap: clamp(1rem, 2vw, 1.5rem);
+        padding-bottom: clamp(1rem, 2vw, 1.5rem);
         scroll-snap-type: x mandatory;
         scrollbar-width: none;
         /* Firefox */

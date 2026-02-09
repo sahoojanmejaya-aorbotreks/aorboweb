@@ -14,7 +14,7 @@ import threading
 from .models import (
     Contact, Blog, TrekCategory, Trek, 
     Testimonial, FAQ, SafetyTip, TeamMember,
-    HomepageBanner, WhatsNew, TopTrek, TrekList
+    HomepageBanner, TrekList
 )
 
 def send_email_async(mail):
@@ -80,8 +80,6 @@ def home(request):
         'featured_blogs': Blog.objects.filter(is_featured=True)[:3],
         'banners': HomepageBanner.objects.filter(is_active=True).order_by('order'),
         'faq_categories': faq_categories,
-        'whats_new': WhatsNew.objects.all().order_by('-created_at')[:5],
-        'top_treks': TopTrek.objects.all()[:6],
     }
 
     cache.set(cache_key, context, 60 * 10)

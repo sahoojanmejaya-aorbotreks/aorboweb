@@ -3,6 +3,8 @@ from django.utils.html import format_html
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+import supabase
+
 
 admin.site.site_header = "Aorbo Treks Admin"
 admin.site.site_title = "Aorbo Treks Admin Pannel"
@@ -11,35 +13,9 @@ admin.site.index_title = "Dashboard"
 from .models import (
     Contact, Blog, TrekCategory, TrekOrganizer, Trek, TrekImage,
     Testimonial, FAQ, SafetyTip, TeamMember, HomepageBanner,
-    SocialMedia, ContactInfo, WhatsNew, TopTrek,
-    TrekList,Visitor, TermsAndConditions, Operator, Tag, TrekPoint 
+    SocialMedia, ContactInfo, TrekList, Visitor, 
+    TermsAndConditions, Operator, Tag, TrekPoint 
 )   
-
-@admin.register(WhatsNew)
-class WhatsNewAdmin(admin.ModelAdmin):
-    list_display = ('title', 'created_at', 'image_preview')
-    readonly_fields = ('image_preview',)
-    fields = ('title', 'content', 'image', 'image_preview', 'created_at')
-    readonly_fields = ('image_preview', 'created_at')
-
-    def image_preview(self, obj):
-        if obj.image_url:
-            return format_html('<img src="{}" width="100" />', obj.image_url)
-        return "No image"
-    image_preview.short_description = "Image Preview"
-
-    
-@admin.register(TopTrek)    
-class TopTrekAdmin(admin.ModelAdmin):
-    list_display = ('name', 'image_preview')
-    readonly_fields = ('image_preview',)
-    fields = ('name', 'description', 'image', 'image_preview')
-
-    def image_preview(self, obj):
-        if obj.image_url:
-            return format_html('<img src="{}" width="100" />', obj.image_url)
-        return "No image"
-    image_preview.short_description = "Image Preview"
 
 # Register your models here.
 @admin.register(Contact)
@@ -58,6 +34,7 @@ class BlogAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     readonly_fields = ('created_at', 'updated_at', 'image_preview')
     date_hierarchy = 'created_at'
+
     fieldsets = (
         (None, {
             'fields': ('title', 'slug', 'author', 'is_featured')
@@ -65,20 +42,52 @@ class BlogAdmin(admin.ModelAdmin):
         ('Content', {
             'fields': ('content', 'excerpt')
         }),
-        ('Image', {
-            'fields': ('image', 'image_preview')
+        ('Image (Supabase)', {
+            'fields': ('image_upload', 'image_preview')
         }),
         ('Dates', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
-    
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['image_upload'] = forms.ImageField(
+            required=False,
+            help_text="Upload image (stored in Supabase as WebP)"
+        )
+        return form
+
+    def save_model(self, request, obj, form, change):
+        image = form.cleaned_data.get('image_upload')
+
+        if image:
+            bucket = supabase.storage.from_("blogs")
+
+            if change and obj.image_url:
+                base_url = bucket.get_public_url("").rstrip("/") + "/"
+
+                old_main_path = obj.image_url.replace(base_url, "", 1)
+                bucket.remove([old_main_path])
+
+                if obj.original_image_url:
+                    old_original_path = obj.original_image_url.replace(base_url, "", 1)
+                    bucket.remove([old_original_path])
+
+            obj.image_url, obj.original_image_url = obj.upload_to_supabase(image)
+
+        super().save_model(request, obj, form, change)
+
     def image_preview(self, obj):
-        if obj.image:
-            return format_html('<img src="{}" width="100" />', obj.image.url)
-        return "-"
-    image_preview.short_description = 'Image Preview'
+        if obj.image_url:
+            return format_html(
+                '<img src="{}" style="max-width:150px; border-radius:6px;" />',
+                obj.image_url
+            )
+        return "—"
+
+    image_preview.short_description = "Image Preview"
 
 @admin.register(TrekCategory)
 class TrekCategoryAdmin(admin.ModelAdmin):

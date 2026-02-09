@@ -271,6 +271,7 @@ CONTENT_SECURITY_POLICY = {
         ),
         'script-src-elem': (
             "'self'",
+            "'unsafe-inline'",  # Required for CKEditor and Django admin inline scripts
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
             'https://www.google.com',
