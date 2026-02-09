@@ -4,6 +4,7 @@ from django.db.models import Count
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 import supabase
+from django import forms
 
 
 admin.site.site_header = "Aorbo Treks Admin"
@@ -88,6 +89,7 @@ class BlogAdmin(admin.ModelAdmin):
         return "—"
 
     image_preview.short_description = "Image Preview"
+
 
 @admin.register(TrekCategory)
 class TrekCategoryAdmin(admin.ModelAdmin):
@@ -271,132 +273,6 @@ class TermsAndConditionsAdmin(admin.ModelAdmin):
     def content_preview(self, obj):
         return mark_safe(obj.content[:100] + '...')  if obj.content else "-"
     content_preview.short_description = 'Content Preview'
-
-# @admin.register(TrekList)
-# class TrekListAdmin(admin.ModelAdmin):
-
-#     # LIST PAGE (table view)
-#     list_display = (
-#         'name',
-#         'state',
-#         'duration_days',
-#         'price_start',
-#         'currency',
-#         'created_at'
-#     )
-#     list_filter = ('state', 'currency', 'created_at')
-#     search_fields = ('name', 'state', 'short_desc')
-#     ordering = ('-created_at',)
-#     date_hierarchy = 'created_at'
-
-#     # FORM PAGE (edit view)
-#     readonly_fields = ('created_at', 'image_preview', 'hero_image_preview')
-
-#     fieldsets = (
-#         ("Basic Info", {
-#             "fields": ('id', 'name', 'state')
-#         }),
-#         ("Images", {
-#             "fields": ('image', 'image_preview', 'hero_image', 'hero_image_preview')
-#         }),
-#         ("Pricing & Duration", {
-#             "fields": ('duration_days', 'price_start', 'currency', 'operating_days')
-#         }),
-#         ("Content", {
-#             "fields": ('short_desc', 'highlights', 'activities')
-#         }),
-#         ("Relationships", {
-#             "fields": ('tags', 'operators', 'trek_points', 'related_treks')
-#         }),
-#         ("Meta", {
-#             "fields": ('created_at',),
-#             "classes": ('collapse',)
-#         }),
-#     )
-
-#     # Better UI for ManyToMany
-#     filter_horizontal = ('tags', 'operators', 'trek_points', 'related_treks')
-
-#     # -------- IMAGE PREVIEWS --------
-#     def image_preview(self, obj):
-#         if obj.image:
-#             return format_html('<img src="{}" width="120" />', obj.image)
-#         return "No image"
-
-#     def hero_image_preview(self, obj):
-#         if obj.hero_image:
-#             return format_html('<img src="{}" width="200" />', obj.hero_image)
-#         return "No hero image"
-
-#     image_preview.short_description = "Image Preview"
-#     hero_image_preview.short_description = "Hero Image Preview"
-
-# @admin.register(TrekList)
-# class TrekListAdmin(admin.ModelAdmin):
-
-#     list_display = (
-#         'name',
-#         'state',
-#         'duration_days',
-#         'price_start',
-#         'currency',
-#         'created_at'
-#     )
-#     list_filter = ('state', 'currency', 'created_at')
-#     search_fields = ('name', 'state', 'short_desc')
-#     ordering = ('-created_at',)
-#     date_hierarchy = 'created_at'
-
-#     # ✅ ADD id here
-#     readonly_fields = (
-#         'id',
-#         'created_at',
-#         'image_preview',
-#         'hero_image_preview'
-#     )
-
-#     fieldsets = (
-#         ("Basic Info", {
-#             # ✅ SAFE because id is readonly
-#             "fields": ('id', 'name', 'state')
-#         }),
-#         ("Images", {
-#             "fields": ('image', 'image_preview', 'hero_image', 'hero_image_preview')
-#         }),
-#         ("Pricing & Duration", {
-#             "fields": ('duration_days', 'price_start', 'currency', 'operating_days')
-#         }),
-#         ("Content", {
-#             "fields": ('short_desc', 'highlights', 'activities')
-#         }),
-#         ("Relationships", {
-#             "fields": ('tags', 'operators', 'trek_points', 'related_treks')
-#         }),
-#         ("Meta", {
-#             "fields": ('created_at',),
-#             "classes": ('collapse',)
-#         }),
-#     )
-
-#     filter_horizontal = ('tags', 'operators', 'trek_points', 'related_treks')
-
-#     def image_preview(self, obj):
-#         if obj.image:
-#             return format_html('<img src="{}" width="120" />', obj.image)
-#         return "No image"
-
-#     def hero_image_preview(self, obj):
-#         if obj.hero_image:
-#             return format_html('<img src="{}" width="200" />', obj.hero_image)
-#         return "No hero image"
-
-#     image_preview.short_description = "Image Preview"
-#     hero_image_preview.short_description = "Hero Image Preview"
-
-from django.contrib import admin
-from django.utils.html import format_html
-from .models import TrekList
-
 
 @admin.register(TrekList)
 class TrekListAdmin(admin.ModelAdmin):
