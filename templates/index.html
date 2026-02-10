@@ -17,11 +17,12 @@
             </div>
 
             <div class="carousel-item">
-                <img src="{% static 'images/hero_2.webp' %}" class="d-block w-100 hero-img" alt="Badrinath">
+                <img src="{% static 'images/hero_2.webp' %}" class="d-block w-100 hero-img" alt="Badrinath"
+                    loading="lazy">
             </div>
 
             <div class="carousel-item">
-                <img src="{% static 'images/hero_3.webp' %}" class="d-block w-100 hero-img" alt="Coorg">
+                <img src="{% static 'images/hero_3.webp' %}" class="d-block w-100 hero-img" alt="Coorg" loading="lazy">
             </div>
 
         </div>
@@ -66,8 +67,8 @@
 
 </section>
 
-<section class="py-5 secondbg" id="featured-destinations">
-    <div class="container px-3 px-lg-5">
+<section class="py-4 secondbg" id="featured-destinations">
+    <div class="container">
 
         <h2 class="text-center fw-bold mb-2">Featured Destinations</h2>
 
@@ -84,7 +85,7 @@
             Explore our most loved treks and travel circuits across India.
         </p>
         {% endif %}
-        <div class="row g-4" id="featured-trek-grid">
+        <div class="row g-3" id="featured-trek-grid">
             {% for trek in featured_treks %}
             <div
                 class="col-12 col-sm-6 col-md-4 col-lg-3 {% if forloop.counter > 8 %}d-none extra-trek-card{% endif %}">
@@ -99,19 +100,19 @@
                             {% if img and img.image_url %}
                             <img src="{{ img.image_url }}" alt="{{ trek.name }}" loading="lazy">
                             <div class="price-pill">
-                            <div class="price-onwards">
-                                Onwards*
+                                <div class="price-onwards">
+                                    Onwards*
+                                </div>
+                                <div class="price-value">
+                                    ₹{{ trek.price_start }}
+                                </div>
                             </div>
-                            <div class="price-value">
-                                ₹{{ trek.price_start }}
-                            </div>
-                        </div>
 
                             {% endif %}
                             {% endwith %}
                         </div>
                     </div>
-                    
+
                     <!-- CONTENT -->
                     <div class="p-3 card-content">
 
@@ -124,14 +125,8 @@
                             </p>
 
                             <p class="small mb-1 days">
-    {% if trek.duration_list %}
-        <strong>Duration:</strong>
-        {{ trek.duration_list.0 }}
-        {% if trek.duration_list|length > 1 %}
-            ...
-        {% endif %}
-    {% endif %}
-</p>
+                                <strong>Duration:</strong> {{ trek.duration_days }}
+                            </p>
 
                             <p class="small mb-2 days">
                                 <strong>Departure:</strong> {{ trek.operating_days | upper }}
@@ -163,72 +158,69 @@
 
         {% if page_obj.paginator.num_pages > 1 %}
         <nav class="mt-5">
-        <ul class="pagination justify-content-center align-items-center">
+            <ul class="pagination justify-content-center align-items-center">
 
-            <!-- PREVIOUS -->
-            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-            {% if page_obj.has_previous %}
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
-            {% else %}
-                <span class="page-link">‹</span>
-            {% endif %}
-            </li>
-
-            <!-- SMALL SCREENS -->
-            <li class="page-item d-sm-none active">
-            <span class="page-link">{{ page_obj.number }}</span>
-            </li>
-
-            <!-- LARGE SCREENS -->
-            {% if page_obj.number > 2 %}
-            <li class="page-item d-none d-sm-inline">
-                <a class="page-link" href="?page=1">1</a>
-            </li>
-            {% endif %}
-
-            {% if page_obj.number > 3 %}
-            <li class="page-item disabled d-none d-sm-inline">
-                <span class="page-link">…</span>
-            </li>
-            {% endif %}
-
-            {% for i in page_obj.paginator.page_range %}
-            {% if i >= page_obj.number|add:"-1" and i <= page_obj.number|add:"1" %}
-                <li class="page-item d-none d-sm-inline {% if page_obj.number == i %}active{% endif %}">
-                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                <!-- PREVIOUS -->
+                <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    {% if page_obj.has_previous %}
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a>
+                    {% else %}
+                    <span class="page-link">‹</span>
+                    {% endif %}
                 </li>
-            {% endif %}
-            {% endfor %}
 
-            {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %}
-            <li class="page-item disabled d-none d-sm-inline">
-                <span class="page-link">…</span>
-            </li>
-            {% endif %}
+                <!-- SMALL SCREENS -->
+                <li class="page-item d-sm-none active">
+                    <span class="page-link">{{ page_obj.number }}</span>
+                </li>
 
-            {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %}
-            <li class="page-item d-none d-sm-inline">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
-                {{ page_obj.paginator.num_pages }}
-                </a>
-            </li>
-            {% endif %}
+                <!-- LARGE SCREENS -->
+                {% if page_obj.number > 2 %}
+                <li class="page-item d-none d-sm-inline">
+                    <a class="page-link" href="?page=1">1</a>
+                </li>
+                {% endif %}
 
-            <!-- NEXT -->
-            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-            {% if page_obj.has_next %}
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
-            {% else %}
-                <span class="page-link">›</span>
-            {% endif %}
-            </li>
+                {% if page_obj.number > 3 %}
+                <li class="page-item disabled d-none d-sm-inline">
+                    <span class="page-link">…</span>
+                </li>
+                {% endif %}
 
-        </ul>
+                {% for i in page_obj.paginator.page_range %}
+                {% if i >= page_obj.number|add:"-1" and i <= page_obj.number|add:"1" %} <li
+                    class="page-item d-none d-sm-inline {% if page_obj.number == i %}active{% endif %}">
+                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
 
-        {% comment %} <p class="text-center small text-muted mt-2">
-            {{ page_obj.start_index }}–{{ page_obj.end_index }}
-            of {{ page_obj.paginator.count }} items
-        </p> {% endcomment %}
+                    {% if page_obj.number < page_obj.paginator.num_pages|add:"-2" %} <li
+                        class="page-item disabled d-none d-sm-inline">
+                        <span class="page-link">…</span>
+                        </li>
+                        {% endif %}
+
+                        {% if page_obj.number < page_obj.paginator.num_pages|add:"-1" %} <li
+                            class="page-item d-none d-sm-inline">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                                {{ page_obj.paginator.num_pages }}
+                            </a>
+                            </li>
+                            {% endif %}
+
+                            <!-- NEXT -->
+                            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                                {% if page_obj.has_next %}
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a>
+                                {% else %}
+                                <span class="page-link">›</span>
+                                {% endif %}
+                            </li>
+
+            </ul>
+
+
         </nav>
         {% endif %}
 
@@ -288,7 +280,7 @@
                         <div class="tyw-icon icon-beach">🌊</div>
                         <h3 class="tyw-card-title">Beach Trails</h3>
                         <p class="tyw-card-text">
-                            Walk along the coast, enjoy sunsets and feel the sea breeze.
+                            Walk along the coast, enjoy sunsets, and feel the sea breeze.
                         </p>
                     </div>
                 </a>
@@ -377,6 +369,7 @@
         </div>
     </div>
 </section>
+
 {% endblock %}
 
 
@@ -394,11 +387,7 @@
         }
     }
 
-    /* ===================================================================
-    *** NOTE: IF OLD CARDS PERSIST, DELETE ANY CSS THAT TARGETS 
-    GENERIC CLASSES LIKE .card OR .trek-card IN EXTERNAL FILES.
-    ===================================================================
-    */
+
 
     /* ============= HERO SECTION WITH FULL-SCREEN CAROUSEL ============= */
     .btn10 {
@@ -456,15 +445,10 @@
                 rgba(0, 0, 0, 0.25),
                 rgba(0, 0, 0, 0.65));
     }
+
     .hero-overlay-content {
-    z-index: 10; 
+        z-index: 10;
     }
-
-    .hero-search-wrapper {
-    position: relative;
-    z-index: 100; /* Above hero overlay */
-    }
-
 
 
     /* Hero text & search */
@@ -500,6 +484,7 @@
 
     .hero-search-form {
         max-width: 720px;
+        width: 90%;
         margin-left: auto;
         margin-right: auto;
     }
@@ -554,22 +539,22 @@
         fill: #ffffff;
     }
 
+
+
     .search-suggestions {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
-
-    background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
-
-    max-height: 280px;
-    overflow-y: auto;
-
-    z-index: 1000;   /* Reasonable z-index */
-    display: none;
-}
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 6px;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+        max-height: 260px;
+        overflow-y: auto;
+        z-index: 9999;
+        display: none;
+    }
 
 
     /* each suggestion */
@@ -703,25 +688,26 @@
         box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
         animation: floatPrice 3s ease-in-out infinite;
     }
-.price-pill {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 2px;
-}
 
-.price-onwards {
-    font-size: 8px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    opacity: 0.9;
-}
+    .price-pill {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+    }
 
-.price-value {
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1;
-}
+    .price-onwards {
+        font-size: 8px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        opacity: 0.9;
+    }
+
+    .price-value {
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1;
+    }
 
     @keyframes floatPrice {
 
@@ -968,243 +954,25 @@
     }
 
     .pagination .page-link {
-    border-radius: 50%;
-    margin: 0 4px;
-    border: none;
-    color: #374151;
-    font-weight: 600;
-}
-
-.pagination .page-item.active .page-link {
-    background: #ff6a1a;
-    color: #fff;
-}
-
-.pagination .page-link:hover {
-    background: #ffe4d1;
-    color: #ff6a1a;
-}
-/* ================= MOBILE: SAME AS DESKTOP ================= */
-@media (max-width: 576px) {
-
-    /* Keep Bootstrap default container padding */
-    .container {
-        padding-left: 1rem;
-        padding-right: 1rem;
+        border-radius: 50%;
+        margin: 0 4px;
+        border: none;
+        color: #374151;
+        font-weight: 600;
     }
 
-    /* Same grid spacing as desktop */
-    .row.g-3 {
-        --bs-gutter-x: 1rem;
-        --bs-gutter-y: 1rem;
+    .pagination .page-item.active .page-link {
+        background: #ff6a1a;
+        color: #fff;
     }
 
-    /* Keep same card shape */
-    .premium-card {
-        border-radius: 16px;
+    .pagination .page-link:hover {
+        background: #ffe4d1;
+        color: #ff6a1a;
     }
-
-    /* 🔥 SAME IMAGE RATIO AS DESKTOP */
-    .trek-card-image-wrapper.ratio {
-        --bs-aspect-ratio: 75%; /* 4:3 = EXACT desktop */
-    }
-
-    .trek-card-image-wrapper {
-        border-radius: 16px 16px 0 0;
-    }
-
-    /* SAME price pill */
-    .price-pill {
-        padding: 8px 16px;
-        font-size: 15px;
-        bottom: 18px;
-        right: 18px;
-        border-radius: 40px;
-    }
-
-    .price-onwards {
-        font-size: 8px;
-    }
-
-    /* SAME typography */
-    .card-content h5 {
-        font-size: 1.25rem;
-        line-height: 1.2;
-    }
-
-    .location-text {
-        font-size: 0.875rem;
-    }
-
-    .days {
-        font-size: 0.875rem;
-    }
-
-    /* SAME padding */
-    .card-content {
-        padding: 1rem !important;
-    }
-
-    /* Optional: reduce hover zoom only */
-    .premium-card:hover img {
-        transform: scale(1.05);
-    }
-}
-/* =========================================================
-   0. RESET & BASE
-   ========================================================= */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 100%;
-}
-
-body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f5f7f6;
-  color: #111;
-  line-height: 1.5;
-}
-
-/* =========================================================
-   1. FULL-WIDTH CONTAINER (COVERS DESKTOP / TV EDGES)
-   ========================================================= */
-
-.container {
-  width: 100%;
-  max-width: 1600px;       /* covers big screens & TVs */
-  margin-inline: auto;
-  padding-inline: clamp(0.75rem, 3vw, 2rem);
-}
-
-/* =========================================================
-   2. RESPONSIVE GRID (AUTO SCALE)
-   ========================================================= */
-
-.layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: clamp(0.75rem, 2vw, 1.25rem);
-}
-
-/* =========================================================
-   3. CARD BASE (DESKTOP / TABLET DEFAULT)
-   ========================================================= */
-
-.card {
-  background: #fff;
-  border-radius: 18px;
-  overflow: hidden;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-}
-
-/* =========================================================
-   4. CARD IMAGE (MAIN HEIGHT CONTROLLER)
-   ========================================================= */
-
-.card-image {
-  width: 100%;
-  height: 240px;           /* desktop default */
-  object-fit: cover;
-}
-
-/* =========================================================
-   5. CARD CONTENT
-   ========================================================= */
-
-.card-body {
-  padding: 1rem;
-}
-
-.card-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.card-meta {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 8px;
-}
-
-/* =========================================================
-   6. PRICE BADGE
-   ========================================================= */
-
-.price-badge {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  background: #ff7a00;
-  color: #fff;
-  font-size: 15px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-weight: 600;
-}
-
-/* =========================================================
-   📱 7. MOBILE FIX (ALL ANDROID + iOS)
-   ========================================================= */
-
-@media (max-width: 480px) {
-
-  .layout {
-    grid-template-columns: repeat(2, 1fr); /* fixed 2 cards */
-    gap: 0.75rem;
-  }
-
-  .card {
-    border-radius: 14px;
-  }
-
-  .card-image {
-    height: 140px;         /* 🔥 fixed small mobile size */
-  }
-
-  .card-body {
-    padding: 0.75rem;
-  }
-
-  .card-title {
-    font-size: 15px;
-  }
-
-  .card-meta {
-    font-size: 12px;
-    line-height: 1.3;
-  }
-
-  .price-badge {
-    font-size: 13px;
-    padding: 6px 10px;
-    top: 10px;
-    right: 10px;
-  }
-}
-
-/* =========================================================
-   8. ULTRA-SMALL PHONES (OPTIONAL SAFETY)
-   ========================================================= */
-
-@media (max-width: 360px) {
-  .card-image {
-    height: 120px;
-  }
-}
-
 </style>
 {% endblock %}
+
 {% block extra_js %}
 <script src="{% static 'js/index.js' %}" defer></script>
 {% endblock %}
