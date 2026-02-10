@@ -1,37 +1,8 @@
 /**
  * Cookie banner and consent management.
  * Manages user consent for analytics and third-party scripts.
- * Also injects SEO-safe Organization schema (JSON-LD).
  */
 (function () {
-
-  /* ===============================
-     SEO: Organization Schema (JSON-LD)
-     =============================== */
-  function injectOrganizationSchema() {
-    // Prevent duplicates
-    if (document.getElementById("aorbo-org-schema")) return;
-
-    const schema = {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Aorbo Treks",
-      "url": "https://aorbotreks.com",
-      "logo": "https://aorbotreks.com/static/images/R-logo.webp",
-      "sameAs": [
-        "https://www.instagram.com/aorbo_treks_official",
-        "https://www.linkedin.com/company/aorbo-treks"
-      ]
-    };
-
-    const script = document.createElement("script");
-    script.type = "application/ld+json";
-    script.id = "aorbo-org-schema";
-    script.textContent = JSON.stringify(schema);
-
-    // Google prefers schema in <head>
-    document.head.appendChild(script);
-  }
 
   /* ===============================
      Cookie Helpers
@@ -98,9 +69,6 @@
      DOM Ready
      =============================== */
   document.addEventListener("DOMContentLoaded", function () {
-
-    // ✅ Inject schema immediately (NO consent required)
-    injectOrganizationSchema();
 
     const banner = document.getElementById("cookie-banner");
     const acceptBtn = document.getElementById("accept-cookies");
