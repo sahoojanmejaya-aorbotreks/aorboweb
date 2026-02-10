@@ -37,6 +37,8 @@ class BlogAdminForm(forms.ModelForm):
         model = Blog
         fields = "__all__"
         
+
+
 @admin.register(Blog)
 class BlogAdmin(admin.ModelAdmin):
     form = BlogAdminForm
@@ -65,37 +67,25 @@ class BlogAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        image = form.cleaned_data.get('image_upload')
+        image_file = form.cleaned_data.get('image_upload')
 
-        if image:
-            bucket = supabase.storage.from_("blogs")
-
-            # 🔥 delete old images if editing
-            if change and obj.image_url:
-                base_url = bucket.get_public_url("").rstrip("/") + "/"
-
-                bucket.remove([
-                    obj.image_url.replace(base_url, "", 1)
-                ])
-
-                if obj.original_image_url:
-                    bucket.remove([
-                        obj.original_image_url.replace(base_url, "", 1)
-                    ])
-
-            obj.image_url, obj.original_image_url = obj.upload_to_supabase(image)
+        if image_file:
+            image_url, original_url = obj.upload_to_supabase(image_file)
+            obj.image_url = image_url
+            obj.original_image_url = original_url
 
         super().save_model(request, obj, form, change)
 
     def image_preview(self, obj):
         if obj.image_url:
             return format_html(
-                '<img src="{}" style="max-width:150px;border-radius:6px;" />',
+                '<img src="{}" style="max-height:120px; border-radius:8px;" />',
                 obj.image_url
             )
-        return "—"
+        return "No image"
 
     image_preview.short_description = "Image Preview"
+
 
 @admin.register(TrekCategory)
 class TrekCategoryAdmin(admin.ModelAdmin):
