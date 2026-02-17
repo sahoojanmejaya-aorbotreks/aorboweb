@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-
-    /* ======================================================
-       SEO: Blog BreadcrumbList Schema (CTR boost)
-       ====================================================== */
     (function injectBlogBreadcrumbSchema() {
         if (document.getElementById('aorbo-blog-breadcrumb')) return;
 

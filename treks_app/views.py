@@ -232,7 +232,7 @@ def blogs(request):
         return render(request, 'blogs.html', {'blogs': cached_page})
     
     paginator = Paginator(
-        Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 6)
+        Blog.objects.only("id", "title", "slug", "created_at").order_by("-created_at"), 4)
     page_obj = paginator.get_page(page_number)
     
     cache.set(cache_key, page_obj, 60 * 30) 
@@ -242,10 +242,14 @@ def blogs(request):
 
 def blog_detail(request, slug):
     blog = get_object_or_404(Blog, slug=slug)
+    all_recent = Blog.objects.exclude(id=blog.id).order_by('-created_at')
+    paginator = Paginator(all_recent, 4)
+    page_number = request.GET.get('page')
+    recent_blogs = paginator.get_page(page_number)
     return render(request, 'blog_detail.html', {
         'blog': blog,
-        'recent_blogs': (Blog.objects.only("title", "slug").exclude(id=blog.id)[:3])
-        })
+        'recent_blogs': recent_blogs
+    })
 
 def treks(request):
     category_id = request.GET.get('category')
